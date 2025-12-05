@@ -1,4 +1,3 @@
-
 const BASE_URL = "https://api.themoviedb.org/3";
 let genreMap = {};
 
@@ -12,10 +11,8 @@ async function fetchGenres() {
 }
 
 async function tmdb(endpoint, params = {}) {
-    // Add the api key
     params.api_key = API_KEY;
 
-    // Turn parameters into query string
     const query = new URLSearchParams(params).toString();
     const url = `${BASE_URL}${endpoint}?${query}`;
 
@@ -33,14 +30,18 @@ async function tmdb(endpoint, params = {}) {
     }
 }
 
-// // Example 1: Search movie
-// tmdb("/search/movie", { query: "Matrix" }).then(data => console.log(data));
+function add_loader(){
+    let wrapper = document.createElement("div");
+    wrapper.innerHTML = `
+        <div class="loader-container" id="active-loader">
+            <div class="loader"></div>
+        </div>
+        `;
 
-// // Example 2: Popular movies
-// tmdb("/movie/popular").then(data => console.log(data));
-
-// // Example 3: Get a movie by ID
-// tmdb("/movie/550").then(data => console.log(data));
+    const main = document.querySelector("main");
+    main.innerHTML = "";
+    main.appendChild(wrapper);
+}
 
 function build_dom(data)
 {
@@ -60,7 +61,7 @@ function build_dom(data)
             .join(", ") || "Unknown";
 
         card.style.backgroundImage =
-            image ? `url(https://image.tmdb.org/t/p/original${image})` : "none";
+            image ? `url(https://image.tmdb.org/t/p/original${image})` : "url(assets/default.png)";
 
         card.innerHTML = `
             <div class="info">
@@ -76,7 +77,7 @@ function build_dom(data)
     });
 }
 
-async function loadMoviesIntoMain(query) {
+async function loadPopularMovies(query) {
     if (Object.keys(genreMap).length === 0) {
         await fetchGenres();
     }
@@ -103,10 +104,11 @@ async function loadSearchedIntoMain(query)
 
 async function search() {
 	let query = document.getElementById("search").value;
+    add_loader();
 	if (query[0] === ':')
 		await loadByGenre(query.slice(1));
 	else if (query === "")
-		await loadMoviesIntoMain();
+		await loadPopularMovies();
 	else
 		await loadSearchedIntoMain(query);
 }
@@ -122,6 +124,8 @@ async function loadByGenre(genreText) {
 	
     if (!genreID) {
 		console.warn("Genre not found:", genreText);
+        const main = document.querySelector("main");
+        main.innerHTML = "Genre can not be found!";
         return;
     }
 	
@@ -173,7 +177,8 @@ search_field.addEventListener("input", async ()=>
 search_field.addEventListener("keydown", (event)=>{
 	if(event.key === "Tab") {
 		event.preventDefault();
-		search_field.value = ghost.value;
+        if (ghost.value)
+            search_field.value = ghost.value;
 		ghost.value = '';
 	}
 });
@@ -184,4 +189,10 @@ search_field.addEventListener("keydown", (event)=>{
 	}
 });
 
-loadMoviesIntoMain();
+async function init()
+{
+    add_loader();
+    await loadPopularMovies();
+}
+
+init();
