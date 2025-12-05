@@ -33,7 +33,6 @@ async function tmdb(endpoint, params = {}) {
     }
 }
 
-
 // // Example 1: Search movie
 // tmdb("/search/movie", { query: "Matrix" }).then(data => console.log(data));
 
@@ -43,19 +42,12 @@ async function tmdb(endpoint, params = {}) {
 // // Example 3: Get a movie by ID
 // tmdb("/movie/550").then(data => console.log(data));
 
-async function loadMoviesIntoMain(query) {
-    const main = document.querySelector("main");
-    main.innerHTML = "";
+function build_dom(data)
+{
+	const main = document.querySelector("main");
+	main.innerHTML = "";
 
-    if (Object.keys(genreMap).length === 0) {
-        await fetchGenres();
-    }
-
-    const data = await tmdb("/movie/popular", { query });
-
-    if (!data || !data.results) return;
-
-    data.results.forEach(movie => {
+	data.results.forEach(movie => {
         const card = document.createElement("div");
         card.className = "card";
 
@@ -84,4 +76,112 @@ async function loadMoviesIntoMain(query) {
     });
 }
 
-loadMoviesIntoMain()
+async function loadMoviesIntoMain(query) {
+    if (Object.keys(genreMap).length === 0) {
+        await fetchGenres();
+    }
+
+    const data = await tmdb("/movie/popular", { query });
+
+    if (!data || !data.results) return;
+
+	build_dom(data);
+}
+
+async function loadSearchedIntoMain(query)
+{
+	if (Object.keys(genreMap).length === 0) {
+        await fetchGenres();
+    }
+
+    const data = await tmdb("/search/movie", { query });
+
+    if (!data || !data.results) return;
+
+	build_dom(data);
+}
+
+async function search() {
+	let query = document.getElementById("search").value;
+	if (query[0] === ':')
+		await loadByGenre(query.slice(1));
+	else if (query === "")
+		await loadMoviesIntoMain();
+	else
+		await loadSearchedIntoMain(query);
+}
+
+async function loadByGenre(genreText) {
+	if (Object.keys(genreMap).length === 0) {
+		await fetchGenres();
+    }
+	
+    const genreID = Object.keys(genreMap).find(id =>
+        genreMap[id].toLowerCase() === genreText.toLowerCase()
+    );
+	
+    if (!genreID) {
+		console.warn("Genre not found:", genreText);
+        return;
+    }
+	
+    const data = await tmdb("/discover/movie", {
+		with_genres: genreID,
+        sort_by: "popularity.desc"
+    });
+	
+    if (!data || !data.results) return;
+	
+    const filtered = data.results.filter(movie =>
+        movie.genre_ids && movie.genre_ids.length > 0 && movie.genre_ids[0] == genreID
+    );
+	
+    build_dom({ results: filtered });
+}
+
+function get_genre(aprox) {
+    if (!aprox || aprox[0] !== ':') return null;
+
+    const search = aprox.slice(1);
+
+    for (const [id, name] of Object.entries(genreMap)) {
+        if (name.startsWith(search)) {
+            return name;
+        }
+    }
+
+    return null;
+}
+
+const search_field = document.getElementById("search");
+const ghost = document.getElementById("ghost");
+
+search_field.addEventListener("input", async ()=>
+{
+	if (Object.keys(genreMap).length === 0) {
+		await fetchGenres();
+	}
+	
+	let prefix = ":";
+	if (!get_genre(search_field.value))
+		ghost.value = '';
+	else
+		ghost.value = prefix.concat(get_genre(search_field.value));
+
+});
+
+search_field.addEventListener("keydown", (event)=>{
+	if(event.key === "Tab") {
+		event.preventDefault();
+		search_field.value = ghost.value;
+		ghost.value = '';
+	}
+});
+
+search_field.addEventListener("keydown", (event)=>{
+	if (event.key === "Enter") {
+		search();
+	}
+});
+
+loadMoviesIntoMain();
