@@ -96,6 +96,7 @@ header h2{
     z-index: 100;
     pointer-events: none;
     background-color: transparent;
+	color: var(--text-muted);
 }
 
 
@@ -119,10 +120,10 @@ main .card{
     height: 300px;
     width: 200px;
     position: relative;
-    border: 1px solid black;
     background-size: cover;
     background-position: center;
     overflow: hidden;
+	border-radius: 5px;
 }
 main .card .title-foreground{
     position: absolute;
